@@ -1,0 +1,12 @@
+# Build system
+/http
+/http.*
+
+# Misc files
+b.bat
+build.bat
+perf.cvs
+
+# IDE files
+*.kdev*
+*.gdb_history
