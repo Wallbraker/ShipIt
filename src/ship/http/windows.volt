@@ -84,6 +84,7 @@ public:
 
 	~this()
 	{
+		cleanup();
 		if (mHeader !is null) {
 			free(cast(void*)mHeader);
 		}
