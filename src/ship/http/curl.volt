@@ -4,7 +4,7 @@ module ship.http.curl;
 
 version (!Windows):
 
-import core.stdc.stdlib : realloc;
+import core.stdc.stdlib : realloc, free;
 
 import watt.io : output;
 
@@ -24,6 +24,18 @@ public:
 		mMulti = curl_multi_init();
 	}
 
+	~this()
+	{
+		foreach (req; mReqs) {
+			req.cleanup();
+		}
+
+		if (mMulti !is null) {
+			curl_multi_cleanup(mMulti);
+			mMulti = null;
+		}
+	}
+
 	bool isEmpty()
 	{
 		return mNew.length == 0 && mReqs.length == 0;
@@ -31,17 +43,49 @@ public:
 
 	void perform()
 	{
+		if (mMulti is null) {
+			return;
+		}
+
 		foreach (req; mNew) {
 			req.fire();
 			mReqs ~= req;
 		}
 		mNew = null;
 
-		int running;
-		curl_multi_perform(mMulti, &running);
+		int num;
+		curl_multi_perform(mMulti, &num);
 
-		if (running < cast(int)mReqs.length) {
-			mReqs = null;
+		if (num == cast(int)mReqs.length) {
+			return;
+		}
+
+		// We know that there is at least one message left.
+		num = 1;
+
+		// Get all messages from the multi.
+		while (num > 0) {
+			auto m = curl_multi_info_read(mMulti, &num);
+			if (m is null ||
+			    m.msg != CURLMSG.CURLMSG_DONE) {
+				continue;
+			}
+
+			// Get and remove request from array.
+			Request req;
+			foreach (i, loopReq; mReqs) {
+				if (req !is null) {
+					mReqs[i-1] = loopReq;
+				}
+				if (loopReq.mEasy is m.easy_handle) {
+					req = loopReq;
+					continue;
+				}
+			}
+			mReqs = mReqs[0 .. $-1];
+
+			curl_multi_remove_handle(mMulti, req.mEasy);
+			req.raiseDone();
 		}
 	}
 }
@@ -70,6 +114,15 @@ public:
 	{
 		mHttp = http;
 		http.mNew ~= this;
+	}
+
+	~this()
+	{
+		cleanup();
+		if (mData !is null) {
+			free(mData);
+			mData = null;
+		}
 	}
 
 	string getString()
@@ -137,8 +190,16 @@ private:
 		mDone = true;
 	}
 
+	void raiseDone()
+	{
+		mDone = true;
+	}
+
 	void cleanup()
 	{
-
+		if (mEasy !is null) {
+			curl_easy_cleanup(mEasy);
+			mEasy = null;
+		}
 	}
 }
