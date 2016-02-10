@@ -34,7 +34,11 @@ $(HTTP_TARGET): $(HTTP_SRC) GNUmakefile
 	@echo "  VOLT   $(HTTP_TARGET)"
 	@$(VOLT) -I src $(HTTP_VFLAGS) $(HTTP_LDFLAGS) -o $(HTTP_TARGET) $(HTTP_SRC)
 
+run: $(HTTP_TARGET)
+	@./$(HTTP_TARGET)
+
 clean:
 	@rm -rf $(HTTP_TARGET) perf.cvs
 
-.PHONY: all clean
+
+.PHONY: all run clean
