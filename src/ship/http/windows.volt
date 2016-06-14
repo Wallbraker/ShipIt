@@ -298,5 +298,5 @@ immutable(wchar)[] convert8To16(const(char)[] str)
 	numChars = MultiByteToWideChar(CP_UTF8, 0, str.ptr, -1, w.ptr, numChars);
 	w[numChars] = 0;
 	w = w[0 .. numChars];
-	return w;
+	return cast(immutable(wchar)[])w;
 }
