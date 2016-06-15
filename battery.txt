@@ -1,0 +1,5 @@
+--dep
+watt
+--if-msvc
+-l
+WinHttp.lib
